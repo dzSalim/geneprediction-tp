@@ -64,7 +64,7 @@ def read_fasta(fasta_file):
     """
     with open(fasta_file) as file_in:
         seq = ""
-        for line in file_in.readlines():
+        for line in file_in:
             if not line.startswith('>'):
                 seq += line.strip()
     seq = seq.upper()
@@ -123,8 +123,8 @@ def has_shine_dalgarno(shine_regex, sequence, start, max_shine_dalgarno_distance
         return False
 
     if match:
-        if (match.end(0) < start - 6):
-            return True
+        #if (match.end(0) < start - 6):
+        return True
     return False
 
 
@@ -150,7 +150,7 @@ def predict_genes(sequence, start_regex, stop_regex, shine_regex,
             stop = find_stop(stop_regex,sequence,position_courante)
 
             if stop:
-                if ((stop + 2) - position_courante) >= min_gap:
+                if (stop - position_courante) >= min_gene_len:
                     if has_shine_dalgarno(shine_regex, sequence, position_courante, max_shine_dalgarno_distance):
                         position_gene.append([position_courante + 1, stop + 3])
                         position_courante = stop + 3 + min_gap
@@ -230,9 +230,9 @@ def main() -> None: # pragma: no cover
     shine_regex = re.compile('A?G?GAGG|GGAG|GG.{1}GG')
     # Arguments
     args = get_arguments()
+    sequence = read_fasta(args.genome_file)
 
     # Let us do magic in 5' to 3'
-    sequence = read_fasta(args.genome_file)
     probable_genes =  predict_genes(sequence, start_regex, stop_regex, shine_regex,
                                     args.min_gene_len, args.max_shine_dalgarno_distance, args.min_gap)
 
@@ -240,16 +240,14 @@ def main() -> None: # pragma: no cover
     sequence_rc = reverse_complement(sequence)
     probable_genes_comp = predict_genes(sequence_rc, start_regex, stop_regex, shine_regex,
                                         args.min_gene_len, args.max_shine_dalgarno_distance, args.min_gap)
-
     for gene in probable_genes_comp:
         gene.reverse()
         gene[0] = len(sequence_rc) - gene[0] + 1
         gene[1] = len(sequence_rc) - gene[1] + 1
-
     # merge the predicted genes
     all_pred_merged = probable_genes + probable_genes_comp
 
-    # sorte the predicted merged
+    # sort the predicted merged
     all_pred_merged.sort(key = lambda gene: gene[0])
 
     # Call to output functions
