@@ -230,25 +230,31 @@ def main() -> None: # pragma: no cover
     shine_regex = re.compile('A?G?GAGG|GGAG|GG.{1}GG')
     # Arguments
     args = get_arguments()
+
     # Let us do magic in 5' to 3'
     sequence = read_fasta(args.genome_file)
     probable_genes =  predict_genes(sequence, start_regex, stop_regex, shine_regex,
                                     args.min_gene_len, args.max_shine_dalgarno_distance, args.min_gap)
 
-    # Don't forget to uncomment !!!
-    # Call these function in the order that you want
-    # We reverse and complement
+    # Let us do magic in 3' to 5'
     sequence_rc = reverse_complement(sequence)
     probable_genes_comp = predict_genes(sequence_rc, start_regex, stop_regex, shine_regex,
                                         args.min_gene_len, args.max_shine_dalgarno_distance, args.min_gap)
-    # Call to output functions
-    write_genes_pos(args.predicted_genes_file, probable_genes)
-    write_genes(args.fasta_file, sequence, probable_genes, sequence_rc, probable_genes_comp)
 
     for gene in probable_genes_comp:
         gene.reverse()
         gene[0] = len(sequence_rc) - gene[0] + 1
         gene[1] = len(sequence_rc) - gene[1] + 1
+
+    # merge the predicted genes
+    all_pred_merged = probable_genes + probable_genes_comp
+
+    # sorte the predicted merged
+    all_pred_merged.sort(key = lambda gene: gene[0])
+
+    # Call to output functions
+    write_genes_pos(args.predicted_genes_file, all_pred_merged)
+    write_genes(args.fasta_file, sequence, probable_genes, sequence_rc, probable_genes_comp)
 
 
 if __name__ == '__main__':
